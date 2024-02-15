@@ -1,0 +1,17 @@
+server:
+  port: 8002
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+myGateway:
+  RoutePrefix: api
+spring:
+  profiles:
+    active: dev
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  cloud:
+    gateway:
+      enabled: true
+
