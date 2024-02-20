@@ -10,13 +10,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Resource;
 import java.security.NoSuchAlgorithmException;
+import java.util.Objects;
 
 /**
  * @author 齿轮
@@ -34,9 +37,8 @@ public class MyGlobalFilter implements GlobalFilter, Ordered {
     /**
      * 检验请求来自已申请用户（存在accesskey）
      *
-     * @param exchange
-     * @param chain
-     * @return
+     * @param exchange 请求对象
+     * @param chain    过滤器链
      */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -47,17 +49,18 @@ public class MyGlobalFilter implements GlobalFilter, Ordered {
         String accesskey;
         int salt;
         String sign;
+        HttpHeaders headers = exchange.getRequest().getHeaders();
         try {
-            sendTimestamp = Long.parseLong(exchange.getRequest().getHeaders().get("ChilunAPISpace-sendTimestamp").get(0));
-            expireTimestamp = Long.parseLong(exchange.getRequest().getHeaders().get("ChilunAPISpace-expireTimestamp").get(0));
-            accesskey = exchange.getRequest().getHeaders().get("ChilunAPISpace-accesskey").get(0);
-            salt = Integer.parseInt(exchange.getRequest().getHeaders().get("ChilunAPISpace-salt").get(0));
-            sign = exchange.getRequest().getHeaders().get("ChilunAPISpace-sign").get(0);
+            sendTimestamp = Long.parseLong(Objects.requireNonNull(headers.get("ChilunAPISpace-sendTimestamp")).get(0));
+            expireTimestamp = Long.parseLong(Objects.requireNonNull(headers.get("ChilunAPISpace-expireTimestamp")).get(0));
+            accesskey = Objects.requireNonNull(headers.get("ChilunAPISpace-accesskey")).get(0);
+            salt = Integer.parseInt(Objects.requireNonNull(headers.get("ChilunAPISpace-salt")).get(0));
+            sign = Objects.requireNonNull(headers.get("ChilunAPISpace-sign")).get(0);
         } catch (Exception e) {
             return ResponseUtils.ErrorResponse("请求头参数为空或格式错误", HttpStatus.BAD_REQUEST, exchange);
         }
 
-        //2校验请求头参数范围
+        //3校验请求头参数范围
         if (expireTimestamp < System.currentTimeMillis() || System.currentTimeMillis() < sendTimestamp || salt > 2000 || salt < 100) {
             return ResponseUtils.ErrorResponse("请求头参数数值异常", HttpStatus.BAD_REQUEST, exchange);
         }
@@ -116,7 +119,23 @@ public class MyGlobalFilter implements GlobalFilter, Ordered {
                     return ResponseUtils.ErrorResponse("校验过程出现异常", HttpStatus.INTERNAL_SERVER_ERROR, exchange);
                 }
             }
-            //全部通过则放行
+            //三、处理敏感信息，然后放行
+//            //1创建新的请求头对象，复制需要保留的头部信息
+//            HttpHeaders newHeaders = new HttpHeaders();
+//            newHeaders.putAll(headers);
+//            //2移除不需要的头部信息
+//            newHeaders.remove("ChilunAPISpace-sendTimestamp");
+//            newHeaders.remove("ChilunAPISpace-expireTimestamp");
+//            newHeaders.remove("ChilunAPISpace-accesskey");
+//            newHeaders.remove("ChilunAPISpace-salt");
+//            newHeaders.remove("ChilunAPISpace-sign");
+//            //3创建新的请求对象，传入新的头部信息
+//            ServerHttpRequest newRequest = exchange.getRequest().mutate()
+//                    .headers(httpHeaders -> httpHeaders.addAll(newHeaders))
+//                    .build();
+//            //4更新ServerWebExchange中的请求对象
+//            ServerWebExchange updatedExchange = exchange.mutate().request(newRequest).build();
+            //5放行
             return chain.filter(exchange);
         });
     }

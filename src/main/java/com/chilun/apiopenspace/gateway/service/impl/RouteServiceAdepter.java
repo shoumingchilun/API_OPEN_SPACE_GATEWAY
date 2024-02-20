@@ -20,6 +20,7 @@ import reactor.core.publisher.Mono;
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,6 +31,7 @@ import java.util.stream.Collectors;
  */
 @Service
 public class RouteServiceAdepter implements RouteService, ApplicationEventPublisherAware {
+
     @Resource
     private RouteDefinitionWriter routeDefinitionWriter;
     @Resource
@@ -56,10 +58,19 @@ public class RouteServiceAdepter implements RouteService, ApplicationEventPublis
     public void saveOrUpdate(SaveOrUpdateRouteRequest request) {
         RouteDefinition routeDefinition = new RouteDefinition();
         routeDefinition.setId(request.getId());
-        routeDefinition.setUri(URI.create(request.getUri()));
+        URI uri = URI.create(request.getUri());
+        routeDefinition.setUri(uri);
         String Path = "/" + routePrefix + "/" + request.getId();
         routeDefinition.setPredicates(Collections.singletonList(new PredicateDefinition("Path=" + Path)));
-        routeDefinition.setFilters(Collections.singletonList(new FilterDefinition("SetPath=/")));
+        routeDefinition.setFilters(Arrays.asList(
+                //将请求转发到指定URI（包含Path），同时去除请求到达网关时原始的path
+                new FilterDefinition("SetPath=/" + (uri.getPath().length() <= 1 ? "" : uri.getPath().substring(1))),
+                //去除请求头中的敏感信息（网关验证信息）
+                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-sendTimestamp"),
+                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-expireTimestamp"),
+                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-accesskey"),
+                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-salt"),
+                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-sign")));
         routeDefinitionWriter.save(Mono.just(routeDefinition)).subscribe();
     }
 
