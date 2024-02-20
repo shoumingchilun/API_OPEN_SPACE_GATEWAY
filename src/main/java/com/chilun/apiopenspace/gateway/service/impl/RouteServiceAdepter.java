@@ -5,6 +5,7 @@ import com.chilun.apiopenspace.gateway.entity.dto.InitRouteRequest;
 import com.chilun.apiopenspace.gateway.entity.dto.SaveOrUpdateRouteRequest;
 import com.chilun.apiopenspace.gateway.entity.pojo.RoutePOJO;
 import com.chilun.apiopenspace.gateway.service.RouteService;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.event.RefreshRoutesEvent;
 import org.springframework.cloud.gateway.filter.FilterDefinition;
@@ -17,7 +18,6 @@ import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.net.URI;
 import java.util.Arrays;
@@ -40,14 +40,6 @@ public class RouteServiceAdepter implements RouteService, ApplicationEventPublis
     @Value("${myGateway.RoutePrefix}")
     private String routePrefix;
 
-//    @PostConstruct
-//    public void test(){
-//        SaveOrUpdateRouteRequest saveOrUpdateRouteRequest = new SaveOrUpdateRouteRequest();
-//        saveOrUpdateRouteRequest.setUri("https://www.baidu.com");
-//        saveOrUpdateRouteRequest.setId("1");
-//        saveOrUpdate(saveOrUpdateRouteRequest);
-//    }
-
     @Override
     public void init(InitRouteRequest request) {
         request.getList().forEach(this::saveOrUpdate);
@@ -64,13 +56,14 @@ public class RouteServiceAdepter implements RouteService, ApplicationEventPublis
         routeDefinition.setPredicates(Collections.singletonList(new PredicateDefinition("Path=" + Path)));
         routeDefinition.setFilters(Arrays.asList(
                 //将请求转发到指定URI（包含Path），同时去除请求到达网关时原始的path
-                new FilterDefinition("SetPath=/" + (uri.getPath().length() <= 1 ? "" : uri.getPath().substring(1))),
-                //去除请求头中的敏感信息（网关验证信息）
-                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-sendTimestamp"),
-                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-expireTimestamp"),
-                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-accesskey"),
-                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-salt"),
-                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-sign")));
+                new FilterDefinition("SetPath=/" + (uri.getPath().length() <= 1 ? "" : uri.getPath().substring(1)))
+                //去除请求头中的敏感信息（网关验证信息）（改为全局过滤器实现）
+//                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-sendTimestamp"),
+//                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-expireTimestamp"),
+//                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-accesskey"),
+//                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-salt"),
+//                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-sign")
+        ));
         routeDefinitionWriter.save(Mono.just(routeDefinition)).subscribe();
     }
 
@@ -106,7 +99,7 @@ public class RouteServiceAdepter implements RouteService, ApplicationEventPublis
     private ApplicationEventPublisher publisher;
 
     @Override
-    public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
+    public void setApplicationEventPublisher(@NotNull ApplicationEventPublisher applicationEventPublisher) {
         this.publisher = applicationEventPublisher;
     }
 }

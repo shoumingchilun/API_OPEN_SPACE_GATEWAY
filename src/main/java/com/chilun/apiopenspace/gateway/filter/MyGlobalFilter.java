@@ -4,6 +4,7 @@ import com.chilun.apiopenspace.gateway.Utils.CryptographicUtils;
 import com.chilun.apiopenspace.gateway.Utils.ResponseUtils;
 import com.chilun.apiopenspace.gateway.entity.pojo.InterfaceAccess;
 import com.chilun.apiopenspace.gateway.service.feign.BackendAccessService;
+import com.chilun.apiopenspace.starter.PublicKeyPrivateKeyUtils;
 import com.chilun.apiopenspace.starter.SignatureUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,7 +13,6 @@ import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -33,6 +33,9 @@ public class MyGlobalFilter implements GlobalFilter, Ordered {
 
     @Resource
     CryptographicUtils cryptographicUtils;
+
+    @Resource
+    PublicKeyPrivateKeyUtils publicKeyPrivateKeyUtils;
 
     /**
      * 检验请求来自已申请用户（存在accesskey）
@@ -119,23 +122,21 @@ public class MyGlobalFilter implements GlobalFilter, Ordered {
                     return ResponseUtils.ErrorResponse("校验过程出现异常", HttpStatus.INTERNAL_SERVER_ERROR, exchange);
                 }
             }
-            //三、处理敏感信息，然后放行
-//            //1创建新的请求头对象，复制需要保留的头部信息
-//            HttpHeaders newHeaders = new HttpHeaders();
-//            newHeaders.putAll(headers);
-//            //2移除不需要的头部信息
-//            newHeaders.remove("ChilunAPISpace-sendTimestamp");
-//            newHeaders.remove("ChilunAPISpace-expireTimestamp");
-//            newHeaders.remove("ChilunAPISpace-accesskey");
-//            newHeaders.remove("ChilunAPISpace-salt");
-//            newHeaders.remove("ChilunAPISpace-sign");
-//            //3创建新的请求对象，传入新的头部信息
-//            ServerHttpRequest newRequest = exchange.getRequest().mutate()
-//                    .headers(httpHeaders -> httpHeaders.addAll(newHeaders))
-//                    .build();
-//            //4更新ServerWebExchange中的请求对象
-//            ServerWebExchange updatedExchange = exchange.mutate().request(newRequest).build();
-            //5放行
+            //三、添加网关验证信息，去除用户验证信息
+            exchange.getRequest().mutate().headers(httpHeaders -> {
+                String originalData = String.valueOf(System.currentTimeMillis());
+                try {
+                    httpHeaders.remove("ChilunAPISpace-sendTimestamp");
+                    httpHeaders.remove("ChilunAPISpace-expireTimestamp");
+                    httpHeaders.remove("ChilunAPISpace-accesskey");
+                    httpHeaders.remove("ChilunAPISpace-salt");
+                    httpHeaders.remove("ChilunAPISpace-sign");
+                    httpHeaders.add("ChilunAPISpace-originalData", originalData);
+                    httpHeaders.add("ChilunAPISpace-encryptedData", publicKeyPrivateKeyUtils.encrypt(originalData));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
             return chain.filter(exchange);
         });
     }
