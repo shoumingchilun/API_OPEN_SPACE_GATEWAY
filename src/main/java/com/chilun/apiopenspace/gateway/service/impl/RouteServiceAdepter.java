@@ -1,9 +1,9 @@
 package com.chilun.apiopenspace.gateway.service.impl;
 
-import com.chilun.apiopenspace.gateway.entity.dto.DeleteRouteRequest;
-import com.chilun.apiopenspace.gateway.entity.dto.InitRouteRequest;
-import com.chilun.apiopenspace.gateway.entity.dto.SaveOrUpdateRouteRequest;
-import com.chilun.apiopenspace.gateway.entity.pojo.RoutePOJO;
+import com.chilun.apiopenspace.gateway.model.dto.DeleteRouteRequest;
+import com.chilun.apiopenspace.gateway.model.dto.InitRouteRequest;
+import com.chilun.apiopenspace.gateway.model.dto.SaveOrUpdateRouteRequest;
+import com.chilun.apiopenspace.gateway.model.pojo.RoutePOJO;
 import com.chilun.apiopenspace.gateway.service.RouteService;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;

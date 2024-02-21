@@ -1,4 +1,4 @@
-package com.chilun.apiopenspace.gateway.entity.dto;
+package com.chilun.apiopenspace.gateway.model.dto;
 
 /**
  * 自定义错误码

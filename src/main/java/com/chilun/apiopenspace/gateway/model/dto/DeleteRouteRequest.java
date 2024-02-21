@@ -1,6 +1,8 @@
-package com.chilun.apiopenspace.gateway.entity.dto;
+package com.chilun.apiopenspace.gateway.model.dto;
 
 import lombok.Data;
+
+import javax.validation.constraints.NotNull;
 
 /**
  * @author 齿轮
@@ -8,5 +10,6 @@ import lombok.Data;
  */
 @Data
 public class DeleteRouteRequest {
+    @NotNull
     String id;
 }

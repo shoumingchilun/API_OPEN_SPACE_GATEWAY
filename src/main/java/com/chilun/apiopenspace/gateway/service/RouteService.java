@@ -1,9 +1,9 @@
 package com.chilun.apiopenspace.gateway.service;
 
-import com.chilun.apiopenspace.gateway.entity.dto.DeleteRouteRequest;
-import com.chilun.apiopenspace.gateway.entity.dto.InitRouteRequest;
-import com.chilun.apiopenspace.gateway.entity.dto.SaveOrUpdateRouteRequest;
-import com.chilun.apiopenspace.gateway.entity.pojo.RoutePOJO;
+import com.chilun.apiopenspace.gateway.model.dto.DeleteRouteRequest;
+import com.chilun.apiopenspace.gateway.model.dto.InitRouteRequest;
+import com.chilun.apiopenspace.gateway.model.dto.SaveOrUpdateRouteRequest;
+import com.chilun.apiopenspace.gateway.model.pojo.RoutePOJO;
 import reactor.core.publisher.Mono;
 
 import java.util.List;

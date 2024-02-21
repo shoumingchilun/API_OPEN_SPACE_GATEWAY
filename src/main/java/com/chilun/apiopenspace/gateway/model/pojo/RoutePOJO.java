@@ -1,4 +1,4 @@
-package com.chilun.apiopenspace.gateway.entity.pojo;
+package com.chilun.apiopenspace.gateway.model.pojo;
 
 import lombok.Data;
 
