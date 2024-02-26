@@ -6,10 +6,22 @@ logging:
   level:
     org.springframework.cloud.gateway: DEBUG
 #  In product environment, logger Level must be changed to Info.
-    root: DEBUG
+#    root: DEBUG
 myGateway:
   RoutePrefix: api
 spring:
+  redis:
+    database: 0
+    host: 127.0.0.1
+    port: 6379
+    password:
+    timeout: 5000
+    lettuce:
+       pool:
+         max-active: 8
+         max-wait: -1ms
+         max-idle: 8
+         min-idle: 0
   profiles:
     active: dev
   mvc:

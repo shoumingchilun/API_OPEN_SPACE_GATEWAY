@@ -14,6 +14,27 @@ import java.nio.charset.StandardCharsets;
  * @date 2024-02-17-20:06
  */
 public class ResponseUtils {
+
+    public static class ResponseEntity {
+        HttpStatus status;
+        String responseBody;
+
+        public ResponseEntity(String responseBody, HttpStatus status) {
+            this.status = status;
+            this.responseBody = responseBody;
+        }
+    }
+
+    public static Mono<Void> ErrorResponse(ResponseEntity response, ServerWebExchange exchange) {
+        // 设置状态码
+        exchange.getResponse().setStatusCode(response.status);
+        // 设置响应体内容
+        exchange.getResponse().getHeaders().add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        DataBufferFactory bufferFactory = exchange.getResponse().bufferFactory();
+        return exchange.getResponse()
+                .writeWith(Mono.just(bufferFactory.wrap(response.responseBody.getBytes(StandardCharsets.UTF_8))));
+    }
+
     public static Mono<Void> ErrorResponse(String responseBody, HttpStatus status, ServerWebExchange exchange) {
         // 设置状态码
         exchange.getResponse().setStatusCode(status);
