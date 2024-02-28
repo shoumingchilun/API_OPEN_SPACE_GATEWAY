@@ -20,6 +20,8 @@ public class InterfaceAccess implements Serializable {
     private Integer remainingTimes;
     private Long interfaceId;
     private Long userid;
+    private Integer callTimes;
+    private Integer failedCallTimes;
     private Date createTime;
     private Date updateTime;
     private Integer isDeleted;

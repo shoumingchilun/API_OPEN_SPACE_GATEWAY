@@ -10,7 +10,6 @@ import com.chilun.apiopenspace.starter.SignatureUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -28,14 +27,14 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 自定义全局过滤类，实现请求验证、补充验证信息、去除已验证信息
+ * 自定义全局过滤类，实现请求验证、补充验证信息、去除已验证信息，同时可调用redis缓存。
  *
  * @author 齿轮
  * @date 2024-02-17-12:17
  */
 @Slf4j
 @Component
-public class MyGlobalFilter implements GlobalFilter, Ordered {
+public class RequestCheckFilter implements GlobalFilter, Ordered {
 
     //远程调用，获得accesskey对应的其他信息如secretkey用于生成签名进行校验。
     @Resource
@@ -98,7 +97,7 @@ public class MyGlobalFilter implements GlobalFilter, Ordered {
             return ResponseUtils.ErrorResponse("请求重复或过期，判定时间戳：" + oldTimestamp, HttpStatus.BAD_REQUEST, exchange);
         }
         hashOperations.put(RedisKeyPrefix.PREVENT_REPLAY, accesskey, sendTimestamp);
-        log.info("过去时间戳：" + oldTimestamp + "\n 当前时间戳：" + sendTimestamp);
+        log.debug("过去时间戳：" + oldTimestamp + "\n 当前时间戳：" + sendTimestamp);
 
         //二、校验请求访问码、签名
         //1获得可获得的参数：当前请求访问的URI
@@ -160,7 +159,8 @@ public class MyGlobalFilter implements GlobalFilter, Ordered {
             try {
                 httpHeaders.remove("ChilunAPISpace-sendTimestamp");
                 httpHeaders.remove("ChilunAPISpace-expireTimestamp");
-                httpHeaders.remove("ChilunAPISpace-accesskey");
+                //保留accesskey，用于记录
+                //httpHeaders.remove("ChilunAPISpace-accesskey");
                 httpHeaders.remove("ChilunAPISpace-salt");
                 httpHeaders.remove("ChilunAPISpace-sign");
                 httpHeaders.add("ChilunAPISpace-originalData", originalData);
