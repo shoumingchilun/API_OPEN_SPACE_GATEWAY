@@ -29,7 +29,7 @@ public class AccessLogServiceAdepter implements AccessLogService {
     @Value("${message-queue-meta.common-log-tag}")
     private String commonTag;
 
-    @Value("${message-queue-meta.common-log-tag}")
+    @Value("${message-queue-meta.error-log-tag}")
     private String errorTag;
 
     @Override

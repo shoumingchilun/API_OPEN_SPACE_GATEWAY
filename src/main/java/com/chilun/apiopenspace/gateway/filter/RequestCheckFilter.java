@@ -159,8 +159,7 @@ public class RequestCheckFilter implements GlobalFilter, Ordered {
             try {
                 httpHeaders.remove("ChilunAPISpace-sendTimestamp");
                 httpHeaders.remove("ChilunAPISpace-expireTimestamp");
-                //保留accesskey，用于记录
-                //httpHeaders.remove("ChilunAPISpace-accesskey");
+                httpHeaders.remove("ChilunAPISpace-accesskey");
                 httpHeaders.remove("ChilunAPISpace-salt");
                 httpHeaders.remove("ChilunAPISpace-sign");
                 httpHeaders.add("ChilunAPISpace-originalData", originalData);
@@ -213,7 +212,6 @@ public class RequestCheckFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        // 设置过滤器执行顺序为最高优先级
-        return Ordered.HIGHEST_PRECEDENCE;
+        return Ordered.HIGHEST_PRECEDENCE+ 10;
     }
 }
