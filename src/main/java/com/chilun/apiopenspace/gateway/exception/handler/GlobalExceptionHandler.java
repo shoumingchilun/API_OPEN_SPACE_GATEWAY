@@ -1,7 +1,9 @@
-package com.chilun.apiopenspace.gateway.filter.exception;
+package com.chilun.apiopenspace.gateway.exception.handler;
 
 import com.chilun.apiopenspace.gateway.Utils.ResponseUtils;
 import com.chilun.apiopenspace.gateway.constant.ExchangeAttributes;
+import com.chilun.apiopenspace.gateway.exception.BusinessException;
+import com.chilun.apiopenspace.gateway.model.pojo.InterfaceAccess;
 import com.chilun.apiopenspace.gateway.service.AccessLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
@@ -27,20 +29,23 @@ public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
 
     @Override
     public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
-        String accesskey = (String) exchange.getAttributes().get(ExchangeAttributes.ACCESS_KEY);
+        InterfaceAccess access = (InterfaceAccess) exchange.getAttributes().get(ExchangeAttributes.INTERFACE_ACCESS);
         String exName = ex.getClass().getName();
         if (exName.equals("io.netty.channel.AbstractChannel$AnnotatedConnectException")) {
             //处理 AnnotatedConnectException：网关连接接口异常
             //1记录日志
             log.info("Catch AbstractChannel$AnnotatedConnectException");
-            logService.sendCommonLog(accesskey, false);
-            logService.sendErrorLog(accesskey, null, null, "接口异常：网关连接接口失败");
+            logService.sendCommonLog(access.getAccesskey(), false);
+            logService.sendErrorLog(access, null, null, "接口异常：网关连接接口失败");
             //2返回异常信息
             return ResponseUtils.ErrorResponse("接口异常：网关连接接口失败", HttpStatus.BAD_GATEWAY, exchange);
+        } else if (exName.equals("com.chilun.apiopenspace.gateway.exception.BusinessException")) {
+            //自定义的验证异常
+            log.info("Catch ObtainParameterException");
+            BusinessException e = (BusinessException) ex;
+            return ResponseUtils.ErrorResponse(e.getMessage(), e.getStatus(), exchange);
         } else {
             log.error("Request " + exchange.getRequest().getId() + "Catch Exception", ex);
-            logService.sendCommonLog(accesskey, false);
-            logService.sendErrorLog(accesskey, null, null, "网关内部异常：" + exName);
             return ResponseUtils.ErrorResponse("网关内部异常：" + exName + "，请求ID：" + exchange.getRequest().getId()
                     , HttpStatus.BAD_GATEWAY, exchange);
         }

@@ -17,6 +17,6 @@ import java.io.Serializable;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AccessLogDTO implements Serializable {
-    private String Accesskey;
+    private String accesskey;
     private boolean success;
 }

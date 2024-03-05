@@ -2,6 +2,7 @@ package com.chilun.apiopenspace.gateway.service.impl;
 
 import com.chilun.apiopenspace.gateway.model.dto.AccessLogDTO;
 import com.chilun.apiopenspace.gateway.model.dto.ErrorLogDTO;
+import com.chilun.apiopenspace.gateway.model.pojo.InterfaceAccess;
 import com.chilun.apiopenspace.gateway.service.AccessLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.producer.SendResult;
@@ -42,9 +43,9 @@ public class AccessLogServiceAdepter implements AccessLogService {
     }
 
     @Override
-    public void sendErrorLog(String accesskey, String request, String response, String errorReason) {
-        ErrorLogDTO errorLogDTO = new ErrorLogDTO(accesskey, request, response, errorReason);
-        String key = accesskey + System.currentTimeMillis();
+    public void sendErrorLog(InterfaceAccess access, String request, String response, String errorReason) {
+        ErrorLogDTO errorLogDTO = new ErrorLogDTO(access.getAccesskey(), access.getUserid(), access.getInterfaceId(), request, response, errorReason);
+        String key = access.getAccesskey() + System.currentTimeMillis();
         SendResult sendResult = rocketMQTemplate.syncSend(topic + ":" + errorTag, MessageBuilder.withPayload(
                 errorLogDTO).setHeader(RocketMQHeaders.KEYS, key).build());
         log.info("send error log result:{}", sendResult);

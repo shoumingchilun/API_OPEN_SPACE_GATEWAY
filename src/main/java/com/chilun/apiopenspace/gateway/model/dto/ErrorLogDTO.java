@@ -17,6 +17,8 @@ import java.io.Serializable;
 @NoArgsConstructor
 public class ErrorLogDTO implements Serializable {
     private String accesskey;
+    private Long userid;
+    private Long interfaceId;
     private String request;
     private String response;
     private String errorReason;

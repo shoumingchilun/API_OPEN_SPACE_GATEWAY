@@ -1,6 +1,7 @@
 package com.chilun.apiopenspace.gateway.filter.log;
 
 import com.chilun.apiopenspace.gateway.Utils.LogCacheMap;
+import com.chilun.apiopenspace.gateway.constant.ExchangeAttributes;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
@@ -8,6 +9,7 @@ import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.http.server.reactive.ServerHttpResponseDecorator;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -20,12 +22,12 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 public class LoggingResponseDecorator extends ServerHttpResponseDecorator {
     private final DataBufferFactory bufferFactory;
-    private final String uuid;
+    private final ServerWebExchange exchange;
 
-    public LoggingResponseDecorator(ServerHttpResponse delegate, String uuid) {
+    public LoggingResponseDecorator(ServerHttpResponse delegate, ServerWebExchange exchange) {
         super(delegate);
         this.bufferFactory = delegate.bufferFactory();
-        this.uuid = uuid;
+        this.exchange = exchange;
     }
 
     @Override
@@ -45,7 +47,8 @@ public class LoggingResponseDecorator extends ServerHttpResponseDecorator {
                         DataBufferUtils.release(join);
                         String responseBody = new String(content, StandardCharsets.UTF_8);
                         log.info("response body: {}", responseBody);
-                        LogCacheMap.saveResponse(uuid, responseBody);
+                        //保存响应
+                        exchange.getAttributes().put(ExchangeAttributes.RESPONSE, responseBody);
                         byte[] uppedContent = responseBody.replaceAll(":null", ":\"\"").getBytes(StandardCharsets.UTF_8);
                         return bufferFactory.wrap(uppedContent);
                     }
