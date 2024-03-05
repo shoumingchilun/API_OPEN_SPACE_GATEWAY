@@ -67,6 +67,7 @@ public class InterfaceAccessServiceImpl implements InterfaceAccessService {
                 }
                 log.info("**************InterfaceAccess in Mysql：" + interfaceAccess.toString());
                 exchange.getAttributes().put(ExchangeAttributes.INTERFACE_ACCESS, interfaceAccess);
+                redisTemplate.opsForValue().set(RedisKey.ACCESS_PREFIX + accesskey, interfaceAccess, 2, TimeUnit.MINUTES);
                 return chain.filter(exchange);
             });
         }
