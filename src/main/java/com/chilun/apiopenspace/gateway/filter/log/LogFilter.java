@@ -1,6 +1,5 @@
 package com.chilun.apiopenspace.gateway.filter.log;
 
-import com.chilun.apiopenspace.gateway.Utils.LogCacheMap;
 import com.chilun.apiopenspace.gateway.constant.ExchangeAttributes;
 import com.chilun.apiopenspace.gateway.model.pojo.InterfaceAccess;
 import com.chilun.apiopenspace.gateway.service.AccessLogService;

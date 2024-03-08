@@ -1,4 +1,4 @@
-package com.chilun.apiopenspace.gateway.exception.handler;
+package com.chilun.apiopenspace.gateway.exception;
 
 import com.chilun.apiopenspace.gateway.Utils.ResponseUtils;
 import com.chilun.apiopenspace.gateway.constant.ExchangeAttributes;

@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 public class InterfaceAccessServiceImpl implements InterfaceAccessService {
 
     @Resource
-    RedisTemplate<String, InterfaceAccess> redisTemplate;
+    RedisTemplate<String, String> redisTemplate;
 
     @Resource
     BackendAccessService accessService;
@@ -42,11 +42,20 @@ public class InterfaceAccessServiceImpl implements InterfaceAccessService {
     @Override
     public Mono<Void> setInterfaceAccessIntoExchange(ServerWebExchange exchange, GatewayFilterChain chain) {
         String accesskey = (String) exchange.getAttributes().get(ExchangeAttributes.ACCESS_KEY);
-        InterfaceAccess interfaceAccessInRedis = redisTemplate.opsForValue().get(RedisKey.ACCESS_PREFIX + accesskey);
+        ObjectMapper mapper = new ObjectMapper();
+        InterfaceAccess interfaceAccessInRedis = null;
+        try {
+            String s = redisTemplate.opsForValue().get(RedisKey.ACCESS_PREFIX + accesskey);
+            if (s != null) {
+                interfaceAccessInRedis = mapper.readValue(s, InterfaceAccess.class);
+            }
+        } catch (JsonProcessingException e) {
+            log.error("解析Redis中的InterfaceAccess信息失败", e);
+        }
         if (interfaceAccessInRedis != null) {
             redisTemplate.expire(RedisKey.ACCESS_PREFIX + accesskey, 2, TimeUnit.MINUTES);
             exchange.getAttributes().put(ExchangeAttributes.INTERFACE_ACCESS, interfaceAccessInRedis);
-            log.info("**************InterfaceAccess in redis：" + interfaceAccessInRedis.toString());
+            log.info("**************InterfaceAccess in redis：" + interfaceAccessInRedis);
             return chain.filter(exchange);
         } else {
             return accessService.getCryptographicInterfaceAccess(accesskey).flatMap(stringBaseResponse -> {
@@ -59,15 +68,18 @@ public class InterfaceAccessServiceImpl implements InterfaceAccessService {
                 }
                 InterfaceAccess interfaceAccess;
                 try {
-                    ObjectMapper mapper = new ObjectMapper();
                     interfaceAccess = mapper.readValue(accessInfo, InterfaceAccess.class);
                 } catch (JsonProcessingException e) {
                     log.error("无法将Json格式的InterfaceAccess映射为实体类，JSON：" + accessInfo, e);
                     throw new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "校验异常：校验过程出现异常");
                 }
-                log.info("**************InterfaceAccess in Mysql：" + interfaceAccess.toString());
+                log.info("**************InterfaceAccess in RPC：" + interfaceAccess.toString());
                 exchange.getAttributes().put(ExchangeAttributes.INTERFACE_ACCESS, interfaceAccess);
-                redisTemplate.opsForValue().set(RedisKey.ACCESS_PREFIX + accesskey, interfaceAccess, 2, TimeUnit.MINUTES);
+                try {
+                    redisTemplate.opsForValue().set(RedisKey.ACCESS_PREFIX + accesskey, mapper.writeValueAsString(interfaceAccess), 2, TimeUnit.MINUTES);
+                } catch (JsonProcessingException e) {
+                    log.error("生成InterfaceAccess的Json信息失败", e);
+                }
                 return chain.filter(exchange);
             });
         }
