@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 /**
  *
@@ -19,4 +20,5 @@ import java.io.Serializable;
 public class AccessLogDTO implements Serializable {
     private String accesskey;
     private boolean success;
+    private BigDecimal cost;
 }

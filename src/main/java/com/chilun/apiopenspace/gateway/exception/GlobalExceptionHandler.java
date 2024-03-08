@@ -14,6 +14,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 
 /**
  * @author 齿轮
@@ -35,7 +36,7 @@ public class GlobalExceptionHandler implements ErrorWebExceptionHandler {
             //处理 AnnotatedConnectException：网关连接接口异常
             //1记录日志
             log.info("Catch AbstractChannel$AnnotatedConnectException");
-            logService.sendCommonLog(access.getAccesskey(), false);
+            logService.sendCommonLog(access.getAccesskey(), false,new BigDecimal("0"));
             logService.sendErrorLog(access, null, null, "接口异常：网关连接接口失败");
             //2返回异常信息
             return ResponseUtils.ErrorResponse("接口异常：网关连接接口失败", HttpStatus.BAD_GATEWAY, exchange);

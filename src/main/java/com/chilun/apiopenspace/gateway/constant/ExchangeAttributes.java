@@ -16,5 +16,5 @@ public interface ExchangeAttributes {
     String RESPONSE= "response";
     String INTERFACE_ACCESS = "interfaceAccess";
     String NEED_IN_LOG = "needInLog";
-    String UUID = "uuid";
+    String COST = "cost";
 }

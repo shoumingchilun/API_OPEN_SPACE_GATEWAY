@@ -13,6 +13,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 
 /**
  * @author 齿轮
@@ -34,8 +35,8 @@ public class AccessLogServiceAdepter implements AccessLogService {
     private String errorTag;
 
     @Override
-    public void sendCommonLog(String accesskey, boolean success) {
-        AccessLogDTO accessLogDTO = new AccessLogDTO(accesskey, success);
+    public void sendCommonLog(String accesskey, boolean success, BigDecimal cost) {
+        AccessLogDTO accessLogDTO = new AccessLogDTO(accesskey, success, cost);
         String key = accesskey + System.currentTimeMillis();
         SendResult sendResult = rocketMQTemplate.syncSend(topic + ":" + commonTag, MessageBuilder.withPayload(
                 accessLogDTO).setHeader(RocketMQHeaders.KEYS, key).build());

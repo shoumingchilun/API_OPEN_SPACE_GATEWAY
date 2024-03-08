@@ -14,6 +14,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
 
 /**
  * @author 齿轮
@@ -32,13 +33,15 @@ public class LogFilter implements GlobalFilter, Ordered {
         ServerHttpResponseDecorator responseDecorator = new LoggingResponseDecorator(exchange.getResponse(), exchange);
         return chain.filter(exchange.mutate().request(requestDecorator).response(responseDecorator).build()).then(Mono.just(exchange))
                 .map(exchange1 -> {
+                    BigDecimal cost = (BigDecimal) exchange1.getAttributes().get(ExchangeAttributes.COST);
+                    log.info("本次请求cost：{}", cost);
                     //提取获取accesskey信息
                     InterfaceAccess access = (InterfaceAccess) exchange.getAttributes().get(ExchangeAttributes.INTERFACE_ACCESS);
                     if (exchange1.getResponse().getStatusCode().is2xxSuccessful()) {
-                        logService.sendCommonLog(access.getAccesskey(), true);
+                        logService.sendCommonLog(access.getAccesskey(), true, cost);
                     } else if ("true".equals(exchange.getAttributes().get(ExchangeAttributes.NEED_IN_LOG))) {
                         //NEED_IN_LOG说明请求已经通过验证，所以发生异常时需要记录（如果没有NEED_IN_LOG说明请求未通过验证，此类异常不需要记录）
-                        logService.sendCommonLog(access.getAccesskey(), false);
+                        logService.sendCommonLog(access.getAccesskey(), false, new BigDecimal("0"));
                         logService.sendErrorLog(access, (String) exchange1.getAttributes().get(ExchangeAttributes.REQUEST_BODY), (String) exchange1.getAttributes().get(ExchangeAttributes.RESPONSE), "接口返回为异常: " + exchange1.getResponse().getStatusCode().getReasonPhrase());
                     } else {
                         //没有NEED_IN_LOG说明请求未通过验证
