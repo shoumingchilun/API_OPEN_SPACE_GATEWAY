@@ -14,4 +14,8 @@ public class SaveOrUpdateRouteRequest {
     String id;
     @NotNull
     String uri;
+
+    Integer replenishRate;
+    Integer burstCapacity;
+    Integer requestedTokens;
 }

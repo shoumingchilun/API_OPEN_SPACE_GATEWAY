@@ -5,6 +5,7 @@ import com.chilun.apiopenspace.gateway.model.dto.InitRouteRequest;
 import com.chilun.apiopenspace.gateway.model.dto.SaveOrUpdateRouteRequest;
 import com.chilun.apiopenspace.gateway.model.pojo.RoutePOJO;
 import com.chilun.apiopenspace.gateway.service.RouteService;
+import org.apache.commons.lang3.ObjectUtils;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.event.RefreshRoutesEvent;
@@ -20,9 +21,7 @@ import reactor.core.publisher.Mono;
 
 import javax.annotation.Resource;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -48,22 +47,40 @@ public class RouteServiceAdepter implements RouteService, ApplicationEventPublis
 
     @Override
     public void saveOrUpdate(SaveOrUpdateRouteRequest request) {
+        //定义路由
         RouteDefinition routeDefinition = new RouteDefinition();
         routeDefinition.setId(request.getId());
         URI uri = URI.create(request.getUri());
         routeDefinition.setUri(uri);
         String Path = "/" + routePrefix + "/" + request.getId();
         routeDefinition.setPredicates(Collections.singletonList(new PredicateDefinition("Path=" + Path)));
-        routeDefinition.setFilters(Arrays.asList(
-                //将请求转发到指定URI（包含Path），同时去除请求到达网关时原始的path
-                new FilterDefinition("SetPath=/" + (uri.getPath().length() <= 1 ? "" : uri.getPath().substring(1)))
-                //去除请求头中的敏感信息（网关验证信息）（改为全局过滤器实现）
-//                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-sendTimestamp"),
-//                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-expireTimestamp"),
-//                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-accesskey"),
-//                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-salt"),
-//                new FilterDefinition("RemoveRequestHeader=ChilunAPISpace-sign")
-        ));
+
+        //定义过滤器
+        //1RPS过滤器
+        FilterDefinition rateFilterDefinition = null;
+        if (ObjectUtils.allNotNull(request.getReplenishRate(), request.getBurstCapacity(), request.getRequestedTokens())) {
+            rateFilterDefinition = new FilterDefinition();
+            rateFilterDefinition.setName("RequestRateLimiter");
+            Map<String, String> argsMap = new HashMap<>();
+            argsMap.put("redis-rate-limiter.replenishRate", request.getReplenishRate().toString());
+            argsMap.put("redis-rate-limiter.burstCapacity", request.getBurstCapacity().toString());
+            argsMap.put("redis-rate-limiter.requestedTokens", request.getRequestedTokens().toString());
+            argsMap.put("key-resolver", "#{@accessKeyResolver}");
+            rateFilterDefinition.setArgs(argsMap);
+        }
+        //2路径转换过滤器
+        //将请求转发到指定URI（包含Path），同时去除请求到达网关时原始的path
+        FilterDefinition pathTransferFilterDefinition = new FilterDefinition("SetPath=/" + (uri.getPath().length() <= 1 ? "" : uri.getPath().substring(1)));
+
+        //添加过滤器
+        ArrayList<FilterDefinition> filterDefinitions = new ArrayList<>();
+        filterDefinitions.add(pathTransferFilterDefinition);
+        if (rateFilterDefinition != null) {
+            filterDefinitions.add(rateFilterDefinition);
+        }
+        routeDefinition.setFilters(filterDefinitions);
+
+        //保存路由
         routeDefinitionWriter.save(Mono.just(routeDefinition)).subscribe();
     }
 
