@@ -6,5 +6,5 @@ package com.chilun.apiopenspace.gateway.constant;
  */
 public interface RedisKey {
     String ACCESS_PREFIX = "InterfaceAccess_";
-    String PREVENT_REPLAY = "preventReplay";
+    String PREVENT_REPLAY = "PreventReplay_";
 }

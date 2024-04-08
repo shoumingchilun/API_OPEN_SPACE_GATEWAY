@@ -1,5 +1,6 @@
 package com.chilun.apiopenspace.gateway.filter;
 
+import com.chilun.apiopenspace.gateway.Utils.ResponseUtils;
 import com.chilun.apiopenspace.gateway.constant.RedisKey;
 import com.chilun.apiopenspace.gateway.constant.ExchangeAttributes;
 import com.chilun.apiopenspace.gateway.exception.BusinessException;
@@ -12,6 +13,7 @@ import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -19,6 +21,7 @@ import reactor.core.publisher.Mono;
 
 import javax.annotation.Resource;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 自定义全局过滤类，实现请求验证、补充验证信息、去除已验证信息，同时可调用redis缓存。
@@ -36,10 +39,9 @@ public class SignCheckFilter implements GlobalFilter, Ordered {
 
     //redis用于防重放验证
     @Resource
-    RedisTemplate<String, InterfaceAccess> redisTemplate;
+    RedisTemplate<String, Integer> redisTemplate;
 
     /**
-     *
      * 检验请求签名/请求是否为重放
      *
      * @param exchange 请求对象
@@ -50,20 +52,31 @@ public class SignCheckFilter implements GlobalFilter, Ordered {
         //获得要用到的参数和对象
         long sendTimestamp = (long) exchange.getAttributes().get(ExchangeAttributes.SEND_TIME_STAMP);
         String accesskey = (String) exchange.getAttributes().get(ExchangeAttributes.ACCESS_KEY);
+        long expireTimestamp = (long) exchange.getAttributes().get(ExchangeAttributes.EXPIRE_TIME_STAMP);
         int salt = (int) exchange.getAttributes().get(ExchangeAttributes.SALT);
         String sign = (String) exchange.getAttributes().get(ExchangeAttributes.SIGN);
         String uri = exchange.getRequest().getURI().toString();
         InterfaceAccess interfaceAccess = (InterfaceAccess) exchange.getAttributes().get(ExchangeAttributes.INTERFACE_ACCESS);
 
-        //校验是否为重放
-        HashOperations<String, String, Long> hashOperations = redisTemplate.opsForHash();
-        Long oldTimestamp = hashOperations.get(RedisKey.PREVENT_REPLAY, accesskey);
-        if (oldTimestamp != null && sendTimestamp <= oldTimestamp) {
-            log.error("请求重放！请求来自{}，请求时间戳{}，请求已存在", exchange.getRequest().getRemoteAddress().getAddress().getHostAddress(), sendTimestamp);
-            throw new BusinessException(HttpStatus.BAD_REQUEST, "校验异常：请求重复或过期，旧时间戳：" + oldTimestamp);
+        //校验是否为重放（新防重放策略，暂未经测试）
+        ValueOperations<String, Integer> operations = redisTemplate.opsForValue();
+        Integer existed = operations.get(RedisKey.PREVENT_REPLAY + accesskey + sendTimestamp + salt);
+        if (existed != null && existed == 1) {
+            log.error("请求重放！请求来自{}，请求时间戳{}，请求随机数{}，请求已存在", exchange.getRequest().getRemoteAddress().getAddress().getHostAddress(), sendTimestamp, salt);
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "校验异常：请求重复，旧时间戳+随机数：" + sendTimestamp + salt);
         }
-        hashOperations.put(RedisKey.PREVENT_REPLAY, accesskey, sendTimestamp);
-        log.debug("过去时间戳：" + oldTimestamp + "\n 当前时间戳：" + sendTimestamp);
+        operations.set(RedisKey.PREVENT_REPLAY + accesskey + sendTimestamp + salt,1,expireTimestamp-sendTimestamp, TimeUnit.MILLISECONDS);
+        log.debug("当前时间戳+随机数：" + sendTimestamp + salt);
+
+//        //校验是否为重放（旧防重放策略）
+//        HashOperations<String, String, Long> hashOperations = redisTemplate.opsForHash();
+//        Long oldTimestamp = hashOperations.get(RedisKey.PREVENT_REPLAY, accesskey);
+//        if (oldTimestamp != null && sendTimestamp <= oldTimestamp) {
+//            log.error("请求重放！请求来自{}，请求时间戳{}，请求已存在", exchange.getRequest().getRemoteAddress().getAddress().getHostAddress(), sendTimestamp);
+//            return ResponseUtils.ErrorResponse("请求重复或过期，判定时间戳：" + oldTimestamp, HttpStatus.BAD_REQUEST, exchange);
+//        }
+//        hashOperations.put(RedisKey.PREVENT_REPLAY, accesskey, sendTimestamp);
+//        log.info("过去时间戳：" + oldTimestamp + "\n 当前时间戳：" + sendTimestamp);
 
         //校验签名
         verifyRequest(sendTimestamp, accesskey, salt, sign, uri, interfaceAccess);

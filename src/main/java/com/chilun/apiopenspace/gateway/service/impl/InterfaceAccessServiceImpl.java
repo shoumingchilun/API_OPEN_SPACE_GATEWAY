@@ -58,6 +58,8 @@ public class InterfaceAccessServiceImpl implements InterfaceAccessService {
             log.info("**************InterfaceAccess in redis：" + interfaceAccessInRedis);
             return chain.filter(exchange);
         } else {
+            // 外层Flux的flatMap回调函数在注册了内层Mono的异步任务后就认为自己的同步部分已完成。
+            // 而内层Mono的回调函数则在后台线程中按需异步地执行，并在执行完毕后继续注册新的内层Mono。
             return accessService.getCryptographicInterfaceAccess(accesskey).flatMap(stringBaseResponse -> {
                 String accessInfo;
                 try {

@@ -25,7 +25,7 @@ public class Knife4jConfig {
                 .apiInfo(new ApiInfoBuilder()
                         .title("API开放平台网关接口文件")
                         .description("API开放平台")
-                        .contact(new Contact("chilun", "http://home.shoumingchilun.cn", "2265501251@qq.com"))
+                        .contact(new Contact("chilun", "http://blogs.shoumingchilun.cn", "2265501251@qq.com"))
                         .version("1.0")
                         .build())
                 .select()
